@@ -1,10 +1,13 @@
-var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
 var favicon = require('serve-favicon');
+var logger = require('morgan');
+var cookieParser = require('cookie-parser');
+var session = require('express-session');
+var SequelizeStore = require('connect-session-sequelize')(session.Store);
+var createError = require('http-errors');
 var partials = require('express-partials');
+var flash = require('express-flash');
 var methodOverride = require("method-override");
 
 var indexRouter = require('./routes/index');
@@ -15,21 +18,35 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
-app.use(partials());
 
 app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+var sequelize = require("./models");
+var sessionStore = new SequelizeStore({
+    db: sequelize,
+    table: "session",
+    checkExpirationInterval: 15 * 60 * 1000, //15 min
+    expiration: 4 * 60 * 60 * 1000 // 4 horas de maxima duracion
+});
+
+app.use(session({
+    secret: "Quiz 2018",
+    store: sessionStore,
+    resave: false,
+    saveUninitialized: true
+}));
+
 app.use(methodOverride('_method',{methods: ["POST","GET"]}));
 app.use(express.static(path.join(__dirname, 'public')));
-
+app.use(partials());
+app.use(flash());
 
 
 app.use('/', indexRouter);
-
-
 
 
 // catch 404 and forward to error handler

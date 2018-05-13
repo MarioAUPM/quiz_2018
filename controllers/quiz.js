@@ -42,19 +42,27 @@ exports.new = (req, res, next) => {
 
 exports.create = (req, res, next) => {
     const {question, answer} = req.body;
+
     const quiz = models.quiz.build({
         question,
         answer
     });
 
-    quiz.save({fields: ['question','answer']})
-        .then(quiz => res.redirect('/quizzes/' + quiz.id))
-        .catch(Sequelize.ValidationError, error => {
-            console.log('There are errors in the form:');
-            error.errors.forEach(({message}) => console.log(message));
-            res.render('/quizzes/new', {quiz});
+    // Saves only the fields question and answer into the DDBB
+    quiz.save({fields: ["question", "answer"]})
+        .then(quiz => {
+            req.flash('success', 'Quiz created successfully.');
+            res.redirect('/quizzes/' + quiz.id);
         })
-        .catch(error => next(error));
+        .catch(Sequelize.ValidationError, error => {
+            req.flash('error', 'There are errors in the form:');
+            error.errors.forEach(({message}) => req.flash('error', message));
+            res.render('quizzes/new', {quiz});
+        })
+        .catch(error => {
+            req.flash('error', 'Error creating a new Quiz: ' + error.message);
+            next(error);
+        });
 };
 
 
@@ -71,19 +79,31 @@ exports.update = (req, res, next) => {
     quiz.answer = body.answer;
 
     quiz.save({fields: ["question", "answer"]})
-        .then(quiz => res.redirect('/quizzes/' + quiz.id))
+        .then(quiz => {
+            req.flash('success', 'Quiz edited successfully.');
+            res.redirect('/quizzes/' + quiz.id);
+        })
         .catch(Sequelize.ValidationError, error => {
-            console.log('There are errors in the form:');
-            error.errors.forEach(({message}) => console.log(message));
+            req.flash('error', 'There are errors in the form:');
+            error.errors.forEach(({message}) => req.flash('error', message));
             res.render('quizzes/edit', {quiz});
         })
-        .catch(error => next(error));
+        .catch(error => {
+            req.flash('error', 'Error editing the Quiz: ' + error.message);
+            next(error);
+        });
 };
 
 exports.destroy = (req, res, next) => {
     req.quiz.destroy()
-        .then(() => res.redirect('/quizzes'))
-        .catch(error => next(error));
+        .then(() => {
+            req.flash('success', 'Quiz deleted succesfully.');
+            res.redirect('/quizzes');
+        })
+        .catch(error => {
+            req.flash('error', 'Error deleting the Quiz: ' + error.message);
+            next(error);
+        });
 };
 
 
