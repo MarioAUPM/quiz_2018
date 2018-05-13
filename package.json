@@ -18,6 +18,8 @@
     "http-errors": "~1.6.2",
     "method-override": "^2.3.10",
     "morgan": "~1.9.0",
-    "serve-favicon": "^2.5.0"
+    "sequelize": "^4.37.5",
+    "serve-favicon": "^2.5.0",
+    "sqlite3": "^3.1.13"
   }
 }

@@ -1,20 +1,25 @@
-const models = require("../models");
+const Sequelize = require("sequelize");
+const {models} = require("../models");
 
 exports.load = (req,res,next,quizId) => {
-    const quiz = models.quiz.findById(Number(quizId));
-    if(quiz){
-        req.quiz=quiz;
-        next();
-    }else{
-        throw new Error('There is no quiz with id = ' + quizId);
-    }
+    models.quiz.findById(quizId)
+        .then(quiz => {
+            if(quiz) {
+                req.quiz = quiz;
+                next();
+            }else{
+                throw new Error('There is no quiz with id = ' + quizId);
+            }
+        })
+        .catch(error => next(error));
 };
 
 exports.index = (req, res, next) => {
-
-    const quizzes = models.quiz.findAll();
-
-    res.render('quizzes/index.ejs', {quizzes});
+    models.quiz.findAll()
+        .then(quizzes => {
+            res.render('quizzes/index.ejs', {quizzes});
+        })
+        .catch(error => next(error));
 };
 
 
@@ -36,21 +41,20 @@ exports.new = (req, res, next) => {
 };
 
 exports.create = (req, res, next) => {
+    const {question, answer} = req.body;
+    const quiz = models.quiz.build({
+        question,
+        answer
+    });
 
-    let quiz = {
-        question: req.body.question,
-        answer: req.body.answer
-    };
-
-    // Validates that they are no empty
-    if (!quiz.question || !quiz.answer) {
-        res.render('quizzes/new', {quiz});
-        return;
-    }
-
-    quiz = models.quiz.create(quiz);
-
-    res.redirect('/quizzes/' + quiz.id);
+    quiz.save({fields: ['question','answer']})
+        .then(quiz => res.redirect('/quizzes/' + quiz.id))
+        .catch(Sequelize.ValidationError, error => {
+            console.log('There are errors in the form:');
+            error.errors.forEach(({message}) => console.log(message));
+            res.render('/quizzes/new', {quiz});
+        })
+        .catch(error => next(error));
 };
 
 
@@ -61,16 +65,25 @@ exports.edit = (req, res, next) => {
 
 
 exports.update = (req, res, next) => {
-    let {quiz, body} = req;
+    const {quiz, body} = req;
+
     quiz.question = body.question;
     quiz.answer = body.answer;
-    models.quiz.update(quiz);
-    res.redirect('/quizzes/' + quiz.id)
+
+    quiz.save({fields: ["question", "answer"]})
+        .then(quiz => res.redirect('/quizzes/' + quiz.id))
+        .catch(Sequelize.ValidationError, error => {
+            console.log('There are errors in the form:');
+            error.errors.forEach(({message}) => console.log(message));
+            res.render('quizzes/edit', {quiz});
+        })
+        .catch(error => next(error));
 };
 
 exports.destroy = (req, res, next) => {
-    models.quiz.destroy(req.quiz);
-    res.redirect('/quizzes');
+    req.quiz.destroy()
+        .then(() => res.redirect('/quizzes'))
+        .catch(error => next(error));
 };
 
 
